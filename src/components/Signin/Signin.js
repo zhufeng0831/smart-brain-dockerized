@@ -1,4 +1,5 @@
 import React from 'react';
+import './Signin.css'
 
 class Signin extends React.Component {
   constructor(props) {
@@ -17,23 +18,42 @@ class Signin extends React.Component {
     this.setState({signInPassword: event.target.value})
   }
 
-  onSubmitSignIn = () => {
-    fetch('http://localhost:3000/signin', {
-      method: 'post',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        email: this.state.signInEmail,
-        password: this.state.signInPassword
-      })
-    })
-      .then(response => response.json())
-      .then(user => {
-        if (user.id) {
-          this.props.loadUser(user)
-          this.props.onRouteChange('home');
-        }
-      })
+  saveAuthTokenInSession = (token) => {
+    window.sessionStorage.setItem('token', token);
   }
+
+  //把front-end输入的内容作为request传递给server, server给出response
+  onSubmitSignIn = () => {
+      fetch('http://localhost:3000/signin', { //describe what the request will be
+        method: 'post',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          email: this.state.signInEmail,
+          password: this.state.signInPassword
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data && data.success === "true") {
+          this.saveAuthTokenInSession(data.token)   
+            fetch(`http://localhost:3000/profile/${data.userId}`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': data.token
+              }
+            })
+            .then(resp => resp.json())
+            .then(user => {
+              if (user && user.email) {
+                this.props.loadUser(user)
+                this.props.onRouteChange('home');
+              }
+            })
+            .catch(console.log)
+        }
+      })    
+    }
 
   render() {
     const { onRouteChange } = this.props;
@@ -46,7 +66,7 @@ class Signin extends React.Component {
               <div className="mt3">
                 <label className="db fw6 lh-copy f6" htmlFor="email-address">Email</label>
                 <input
-                  className="pa2 input-reset ba bg-transparent hover-bg-black hover-white w-100"
+                  className="pa2 input-reset ba bg-transparent hover-bg-black hover-white w-100 hover-black"
                   type="email"
                   name="email-address"
                   id="email-address"
@@ -56,7 +76,7 @@ class Signin extends React.Component {
               <div className="mv3">
                 <label className="db fw6 lh-copy f6" htmlFor="password">Password</label>
                 <input
-                  className="b pa2 input-reset ba bg-transparent hover-bg-black hover-white w-100"
+                  className="b pa2 input-reset ba bg-transparent hover-bg-black hover-white w-100 hover-black"
                   type="password"
                   name="password"
                   id="password"
@@ -67,7 +87,7 @@ class Signin extends React.Component {
             <div className="">
               <input
                 onClick={this.onSubmitSignIn}
-                className="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
+                className="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib hover-black"
                 type="submit"
                 value="Sign in"
               />
